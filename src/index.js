@@ -23,13 +23,20 @@ async function alreadyExists(participant) {
   return exists;
 }
 
+function filterMessages(user, message) {
+  return (
+    message.type === "message" || message.to === user || message.from === user
+  );
+}
+
 app.post("/participants", async (req, res) => {
   const { name } = req.body;
   if (!name) {
     res.sendStatus(422);
     return;
   }
-  if (alreadyExists(name)) {
+  const exists = await alreadyExists(name);
+  if (exists) {
     res.sendStatus(409);
     return;
   } else {
@@ -66,12 +73,13 @@ app.get("/participants", async (req, res) => {
 app.post("/messages", async (req, res) => {
   const { to, text, type } = req.body;
   const from = req.headers.user;
+  const exists = await alreadyExists(from);
   if (
     !to ||
     !text ||
     !(type === "message" || type === "private_message") ||
     !from ||
-    !alreadyExists(from)
+    !exists
   ) {
     res.sendStatus(422);
     return;
@@ -82,6 +90,25 @@ app.post("/messages", async (req, res) => {
       .collection("messages")
       .insertOne({ from, to, text, type, time: dayjs(now).format("HH:mm:ss") });
     res.sendStatus(201);
+  } catch (error) {
+    console.log(error);
+    res.sendStatus(500);
+  }
+});
+
+app.get("/messages", async (req, res) => {
+  const limit = parseInt(req.query.limit);
+  const user = req.headers.user;
+  try {
+    const messages = await db.collection("messages").find().toArray();
+    const filteredMessages = messages.filter((message) =>
+      filterMessages(user, message)
+    );
+    if (limit > 0) {
+      res.send(filteredMessages.slice(-limit));
+      return;
+    }
+    res.send(filteredMessages);
   } catch (error) {
     console.log(error);
     res.sendStatus(500);
