@@ -66,8 +66,7 @@ app.post("/participants", async (req, res) => {
       });
       res.sendStatus(201);
     } catch (error) {
-      console.log(error);
-      res.sendStatus(500);
+      res.status(500).send(error);
     }
   }
 });
@@ -77,8 +76,7 @@ app.get("/participants", async (req, res) => {
     const participants = await db.collection("participants").find().toArray();
     res.send(participants);
   } catch (error) {
-    console.log(error);
-    res.sendStatus(500);
+    res.status(500).send(error);
   }
 });
 
@@ -104,8 +102,7 @@ app.post("/messages", async (req, res) => {
       .insertOne({ from, ...req.body, time: dayjs(now).format("HH:mm:ss") });
     res.sendStatus(201);
   } catch (error) {
-    console.log(error);
-    res.sendStatus(500);
+    res.status(500).send(error);
   }
 });
 
@@ -123,8 +120,7 @@ app.get("/messages", async (req, res) => {
     }
     res.send(filteredMessages);
   } catch (error) {
-    console.log(error);
-    res.sendStatus(500);
+    res.status(500).send(error);
   }
 });
 
