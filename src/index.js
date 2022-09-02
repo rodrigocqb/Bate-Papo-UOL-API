@@ -39,6 +39,30 @@ function filterMessages(user, message) {
   );
 }
 
+async function removeInactive() {
+  const users = await db.collection("participants").find().toArray();
+  const inactiveUsers = users.filter((user) => {
+    const now = Date.now();
+    return now - user.lastStatus > 10000;
+  });
+  return inactiveUsers;
+}
+
+setInterval(async () => {
+  const inactiveUsers = await removeInactive();
+  inactiveUsers.forEach(async (user) => {
+    const now = Date.now();
+    await db.collection("participants").deleteOne({ _id: user._id });
+    await db.collection("messages").insertOne({
+      from: user.name,
+      to: "Todos",
+      text: "sai da sala...",
+      type: "status",
+      time: dayjs(now).format("HH:mm:ss"),
+    });
+  });
+}, 15000);
+
 app.post("/participants", async (req, res) => {
   const { name } = req.body;
   const validation = userSchema.validate({ name }, { abortEarly: true });
