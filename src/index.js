@@ -20,6 +20,12 @@ const userSchema = joi.object({
   name: joi.string().required(),
 });
 
+const messageSchema = joi.object({
+  to: joi.string().required(),
+  text: joi.string().required(),
+  type: joi.string().valid("message", "private_message").required(),
+});
+
 async function alreadyExists(participant) {
   const exists = await db
     .collection("participants")
@@ -80,21 +86,23 @@ app.post("/messages", async (req, res) => {
   const { to, text, type } = req.body;
   const from = req.headers.user;
   const exists = await alreadyExists(from);
-  if (
-    !to ||
-    !text ||
-    !(type === "message" || type === "private_message") ||
-    !from ||
-    !exists
-  ) {
-    res.sendStatus(422);
+  const validation = messageSchema.validate(req.body, { abortEarly: false });
+  if (validation.error || !exists) {
+    let errors;
+    if (validation.error) {
+      errors = validation.error.details.map((detail) => detail.message);
+    }
+    if (!exists) {
+      errors.push("O usuário não está logado!");
+    }
+    res.status(422).send(errors);
     return;
   }
   try {
     const now = Date.now();
     await db
       .collection("messages")
-      .insertOne({ from, to, text, type, time: dayjs(now).format("HH:mm:ss") });
+      .insertOne({ from, ...req.body, time: dayjs(now).format("HH:mm:ss") });
     res.sendStatus(201);
   } catch (error) {
     console.log(error);
