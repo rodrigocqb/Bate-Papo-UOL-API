@@ -74,27 +74,27 @@ app.post("/participants", async (req, res) => {
     res.status(422).send(error);
     return;
   }
-  const exists = await alreadyExists(name);
-  if (exists) {
-    res.sendStatus(409);
-    return;
-  } else {
-    try {
-      const now = Date.now();
-      await db
-        .collection("participants")
-        .insertOne({ name: name, lastStatus: now });
-      await db.collection("messages").insertOne({
-        from: name,
-        to: "Todos",
-        text: "entra na sala...",
-        type: "status",
-        time: dayjs(now).format("HH:mm:ss"),
-      });
-      res.sendStatus(201);
-    } catch (error) {
-      res.status(500).send(error);
+  try {
+    const exists = await alreadyExists(name);
+    if (exists) {
+      res.sendStatus(409);
+      return;
     }
+
+    const now = Date.now();
+    await db
+      .collection("participants")
+      .insertOne({ name: name, lastStatus: now });
+    await db.collection("messages").insertOne({
+      from: name,
+      to: "Todos",
+      text: "entra na sala...",
+      type: "status",
+      time: dayjs(now).format("HH:mm:ss"),
+    });
+    res.sendStatus(201);
+  } catch (error) {
+    res.status(500).send(error);
   }
 });
 
@@ -109,20 +109,21 @@ app.get("/participants", async (req, res) => {
 
 app.post("/messages", async (req, res) => {
   const from = req.headers.user;
-  const exists = await alreadyExists(from);
-  const validation = messageSchema.validate(req.body, { abortEarly: false });
-  if (validation.error || !exists) {
-    let errors;
-    if (validation.error) {
-      errors = validation.error.details.map((detail) => detail.message);
-    }
-    if (!exists) {
-      errors.push("O usuário não está logado!");
-    }
-    res.status(422).send(errors);
-    return;
-  }
   try {
+    const exists = await alreadyExists(from);
+    const validation = messageSchema.validate(req.body, { abortEarly: false });
+    if (validation.error || !exists) {
+      let errors;
+      if (validation.error) {
+        errors = validation.error.details.map((detail) => detail.message);
+      }
+      if (!exists) {
+        errors.push("O usuário não está logado!");
+      }
+      res.status(422).send(errors);
+      return;
+    }
+
     const now = Date.now();
     await db
       .collection("messages")
@@ -153,12 +154,13 @@ app.get("/messages", async (req, res) => {
 
 app.post("/status", async (req, res) => {
   const user = req.headers.user;
-  const exists = await alreadyExists(user);
-  if (!exists) {
-    res.sendStatus(404);
-    return;
-  }
   try {
+    const exists = await alreadyExists(user);
+    if (!exists) {
+      res.sendStatus(404);
+      return;
+    }
+
     const now = Date.now();
     await db
       .collection("participants")
