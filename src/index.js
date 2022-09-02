@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { MongoClient } from "mongodb";
-
+import joi from "joi";
 import dotenv from "dotenv";
 import dayjs from "dayjs";
 dotenv.config();
@@ -14,6 +14,10 @@ const mongoClient = new MongoClient(process.env.MONGO_URI);
 let db;
 mongoClient.connect().then(() => {
   db = mongoClient.db("bate_papo_uol");
+});
+
+const userSchema = joi.object({
+  name: joi.string().required(),
 });
 
 async function alreadyExists(participant) {
@@ -31,8 +35,10 @@ function filterMessages(user, message) {
 
 app.post("/participants", async (req, res) => {
   const { name } = req.body;
-  if (!name) {
-    res.sendStatus(422);
+  const validation = userSchema.validate({ name }, { abortEarly: true });
+  if (validation.error) {
+    const error = validation.error.details[0].message;
+    res.status(422).send(error);
     return;
   }
   const exists = await alreadyExists(name);
