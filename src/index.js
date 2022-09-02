@@ -83,7 +83,6 @@ app.get("/participants", async (req, res) => {
 });
 
 app.post("/messages", async (req, res) => {
-  const { to, text, type } = req.body;
   const from = req.headers.user;
   const exists = await alreadyExists(from);
   const validation = messageSchema.validate(req.body, { abortEarly: false });
