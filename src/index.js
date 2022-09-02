@@ -35,7 +35,10 @@ async function alreadyExists(participant) {
 
 function filterMessages(user, message) {
   return (
-    message.type === "message" || message.to === user || message.from === user
+    message.type === "message" ||
+    message.type === "status" ||
+    message.to === user ||
+    message.from === user
   );
 }
 
