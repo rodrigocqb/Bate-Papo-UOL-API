@@ -4,6 +4,7 @@ import { MongoClient, ObjectId } from "mongodb";
 import joi from "joi";
 import dotenv from "dotenv";
 import dayjs from "dayjs";
+import { stripHtml } from "string-strip-html";
 dotenv.config();
 
 const app = express();
@@ -67,7 +68,8 @@ setInterval(async () => {
 }, 15000);
 
 app.post("/participants", async (req, res) => {
-  const { name } = req.body;
+  let { name } = req.body;
+  name = stripHtml(name).result.trim();
   const validation = userSchema.validate({ name }, { abortEarly: true });
   if (validation.error) {
     const error = validation.error.details[0].message;
@@ -82,9 +84,7 @@ app.post("/participants", async (req, res) => {
     }
 
     const now = Date.now();
-    await db
-      .collection("participants")
-      .insertOne({ name: name, lastStatus: now });
+    await db.collection("participants").insertOne({ name, lastStatus: now });
     await db.collection("messages").insertOne({
       from: name,
       to: "Todos",
@@ -109,9 +109,16 @@ app.get("/participants", async (req, res) => {
 
 app.post("/messages", async (req, res) => {
   const from = req.headers.user;
+  let { to, text, type } = req.body;
+  to = stripHtml(to).result.trim();
+  text = stripHtml(text).result.trim();
+  type = stripHtml(type).result.trim();
   try {
     const exists = await alreadyExists(from);
-    const validation = messageSchema.validate(req.body, { abortEarly: false });
+    const validation = messageSchema.validate(
+      { to, text, type },
+      { abortEarly: false }
+    );
     if (validation.error || !exists) {
       let errors;
       if (validation.error) {
@@ -127,7 +134,7 @@ app.post("/messages", async (req, res) => {
     const now = Date.now();
     await db
       .collection("messages")
-      .insertOne({ from, ...req.body, time: dayjs(now).format("HH:mm:ss") });
+      .insertOne({ from, to, text, type, time: dayjs(now).format("HH:mm:ss") });
     res.sendStatus(201);
   } catch (error) {
     res.status(500).send(error);
@@ -209,8 +216,15 @@ app.put("/messages/:id", async (req, res) => {
       return;
     }
 
+    let { to, text, type } = req.body;
+    to = stripHtml(to).result.trim();
+    text = stripHtml(text).result.trim();
+    type = stripHtml(type).result.trim();
     const exists = await alreadyExists(user);
-    const validation = messageSchema.validate(req.body, { abortEarly: false });
+    const validation = messageSchema.validate(
+      { to, text, type },
+      { abortEarly: false }
+    );
     if (validation.error || !exists) {
       let errors;
       if (validation.error) {
@@ -224,7 +238,7 @@ app.put("/messages/:id", async (req, res) => {
     }
     await db
       .collection("messages")
-      .updateOne({ _id: ObjectId(id) }, { $set: req.body });
+      .updateOne({ _id: ObjectId(id) }, { $set: { to, text, type } });
     res.sendStatus(204);
   } catch (error) {
     res.status(500).send(error);
