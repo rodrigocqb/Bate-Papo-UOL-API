@@ -193,4 +193,42 @@ app.delete("/messages/:id", async (req, res) => {
   }
 });
 
+app.put("/messages/:id", async (req, res) => {
+  const { id } = req.params;
+  const user = req.headers.user;
+  try {
+    const message = await db
+      .collection("messages")
+      .findOne({ _id: ObjectId(id) });
+    if (!message) {
+      res.sendStatus(404);
+      return;
+    }
+    if (message.from !== user) {
+      res.sendStatus(401);
+      return;
+    }
+
+    const exists = await alreadyExists(user);
+    const validation = messageSchema.validate(req.body, { abortEarly: false });
+    if (validation.error || !exists) {
+      let errors;
+      if (validation.error) {
+        errors = validation.error.details.map((detail) => detail.message);
+      }
+      if (!exists) {
+        errors.push("O usuário não está logado!");
+      }
+      res.status(422).send(errors);
+      return;
+    }
+    await db
+      .collection("messages")
+      .updateOne({ _id: ObjectId(id) }, { $set: req.body });
+    res.sendStatus(204);
+  } catch (error) {
+    res.status(500).send(error);
+  }
+});
+
 app.listen(5000, () => console.log("Listening on port 5000!"));
