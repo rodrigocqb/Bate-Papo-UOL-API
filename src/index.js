@@ -108,7 +108,8 @@ app.get("/participants", async (req, res) => {
 });
 
 app.post("/messages", async (req, res) => {
-  const from = req.headers.user;
+  let from = req.headers.user;
+  from = stripHtml(from).result.trim();
   let { to, text, type } = req.body;
   to = stripHtml(to).result.trim();
   text = stripHtml(text).result.trim();
@@ -143,7 +144,8 @@ app.post("/messages", async (req, res) => {
 
 app.get("/messages", async (req, res) => {
   const limit = parseInt(req.query.limit);
-  const user = req.headers.user;
+  let user = req.headers.user;
+  user = stripHtml(user).result.trim();
   try {
     const messages = await db.collection("messages").find().toArray();
     const filteredMessages = messages.filter((message) =>
@@ -160,7 +162,8 @@ app.get("/messages", async (req, res) => {
 });
 
 app.post("/status", async (req, res) => {
-  const user = req.headers.user;
+  let user = req.headers.user;
+  user = stripHtml(user).result.trim();
   try {
     const exists = await alreadyExists(user);
     if (!exists) {
@@ -180,7 +183,8 @@ app.post("/status", async (req, res) => {
 
 app.delete("/messages/:id", async (req, res) => {
   const { id } = req.params;
-  const user = req.headers.user;
+  let user = req.headers.user;
+  user = stripHtml(user).result.trim();
   try {
     const message = await db
       .collection("messages")
@@ -202,7 +206,8 @@ app.delete("/messages/:id", async (req, res) => {
 
 app.put("/messages/:id", async (req, res) => {
   const { id } = req.params;
-  const user = req.headers.user;
+  let user = req.headers.user;
+  user = stripHtml(user).result.trim();
   try {
     const message = await db
       .collection("messages")
